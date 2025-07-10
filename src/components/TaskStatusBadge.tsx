@@ -1,4 +1,3 @@
-
 import { Badge } from "@/ui/components/Badge";
 import { Task } from "../hooks/useMockTasks";
 
@@ -6,27 +5,27 @@ const getStatusInfo = (status: Task["status"]) => {
   switch (status) {
     case "Pending":
       return {
-        variant: "neutral" as const,
+        variant: "neutral",
         className: "bg-gray-100 text-gray-800",
       };
     case "In Progress":
       return {
-        variant: "warning" as const,
+        variant: "warning",
         className: "bg-amber-100 text-amber-800",
       };
     case "Completed":
       return {
-        variant: "success" as const,
+        variant: "success",
         className: "bg-green-100 text-green-800",
       };
     case "Cancelled":
       return {
-        variant: "destructive" as const,
+        variant: "destructive",
         className: "bg-red-100 text-red-800",
       };
     default:
       return {
-        variant: "neutral" as const,
+        variant: "neutral",
         className: "bg-gray-100 text-gray-800",
       };
   }
@@ -40,7 +39,6 @@ export function TaskStatusBadge({ status }: TaskStatusBadgeProps) {
   const statusInfo = getStatusInfo(status);
   return (
     <Badge
-      variant={statusInfo.variant}
       className={`${statusInfo.className} px-3 py-1 rounded-full text-xs font-medium`}
     >
       {status}
