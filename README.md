@@ -68,3 +68,5 @@ melt-proto-dev/
 ├── public/                     # Static assets
 └── config files                # ESLint, Prettier, Tailwind, TypeScript
 ```
+
+Version 1.0.0
