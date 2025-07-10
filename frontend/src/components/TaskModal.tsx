@@ -1,8 +1,16 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect } from "react";
+import { useForm, Controller } from "react-hook-form";
 import { X } from "lucide-react";
 import type { Task } from "../hooks/useMockTasks";
+
+interface TaskFormData {
+  title: string;
+  description: string;
+  status: "Pending" | "In Progress" | "Completed" | "Cancelled";
+  dueDate: string;
+}
 
 interface TaskModalProps {
   isOpen: boolean;
@@ -21,17 +29,30 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   isSubmitting = false,
   mode,
 }) => {
-  const [formData, setFormData] = useState({
-    title: "",
-    description: "",
-    status: "Pending",
-    dueDate: "",
+  const {
+    control,
+    handleSubmit,
+    reset,
+    formState: { errors, isValid },
+    watch,
+  } = useForm<TaskFormData>({
+    defaultValues: {
+      title: "",
+      description: "",
+      status: "Pending",
+      dueDate: "",
+    },
+    mode: "onChange",
   });
 
+  // Watch title for real-time validation
+  const watchedTitle = watch("title");
+
+  // Reset form when modal opens/closes or task changes
   useEffect(() => {
     if (isOpen) {
       if (mode === "update" && task) {
-        setFormData({
+        reset({
           title: task.title,
           description: task.description || "",
           status: task.status,
@@ -40,7 +61,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
             : "",
         });
       } else {
-        setFormData({
+        reset({
           title: "",
           description: "",
           status: "Pending",
@@ -48,16 +69,14 @@ export const TaskModal: React.FC<TaskModalProps> = ({
         });
       }
     }
-  }, [isOpen, task, mode]);
+  }, [isOpen, task, mode, reset]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-
+  const onFormSubmit = (data: TaskFormData) => {
     const submitData: Partial<Task> = {
-      title: formData.title,
-      description: formData.description,
-      status: formData.status,
-      dueDate: formData.dueDate ? new Date(formData.dueDate) : undefined,
+      title: data.title,
+      description: data.description,
+      status: data.status,
+      dueDate: data.dueDate ? new Date(data.dueDate) : null,
     };
 
     if (mode === "update" && task) {
@@ -67,16 +86,11 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     onSubmit(submitData);
   };
 
-  const handleChange = (
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >
-  ) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+  const handleClose = () => {
+    if (!isSubmitting) {
+      reset();
+      onClose();
+    }
   };
 
   if (!isOpen) return null;
@@ -84,19 +98,21 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
       <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
+        {/* Header */}
         <div className="flex items-center justify-between p-6 border-b">
           <h2 className="text-xl font-semibold text-gray-900">
             {mode === "create" ? "Create New Task" : "Update Task"}
           </h2>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="text-gray-400 hover:text-gray-600 transition-colors"
             disabled={isSubmitting}
           >
             <X size={24} />
           </button>
         </div>
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+
+        <form onSubmit={handleSubmit(onFormSubmit)} className="p-6 space-y-4">
           <div>
             <label
               htmlFor="title"
@@ -104,18 +120,42 @@ export const TaskModal: React.FC<TaskModalProps> = ({
             >
               Title *
             </label>
-            <input
-              type="text"
-              id="title"
+            <Controller
               name="title"
-              value={formData.title}
-              onChange={handleChange}
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Enter task title"
-              disabled={isSubmitting}
+              control={control}
+              rules={{
+                required: "Title is required",
+                minLength: {
+                  value: 2,
+                  message: "Title must be at least 2 characters long",
+                },
+                maxLength: {
+                  value: 100,
+                  message: "Title must not exceed 100 characters",
+                },
+              }}
+              render={({ field }) => (
+                <input
+                  {...field}
+                  type="text"
+                  id="title"
+                  className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 transition-colors ${
+                    errors.title
+                      ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+                      : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                  }`}
+                  placeholder="Enter task title"
+                  disabled={isSubmitting}
+                />
+              )}
             />
+            {errors.title && (
+              <p className="mt-1 text-sm text-red-600">
+                {errors.title.message}
+              </p>
+            )}
           </div>
+
           <div>
             <label
               htmlFor="description"
@@ -123,17 +163,37 @@ export const TaskModal: React.FC<TaskModalProps> = ({
             >
               Description
             </label>
-            <textarea
-              id="description"
+            <Controller
               name="description"
-              value={formData.description}
-              onChange={handleChange}
-              rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Enter task description"
-              disabled={isSubmitting}
+              control={control}
+              rules={{
+                maxLength: {
+                  value: 500,
+                  message: "Description must not exceed 500 characters",
+                },
+              }}
+              render={({ field }) => (
+                <textarea
+                  {...field}
+                  id="description"
+                  rows={3}
+                  className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 transition-colors ${
+                    errors.description
+                      ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+                      : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                  }`}
+                  placeholder="Enter task description"
+                  disabled={isSubmitting}
+                />
+              )}
             />
+            {errors.description && (
+              <p className="mt-1 text-sm text-red-600">
+                {errors.description.message}
+              </p>
+            )}
           </div>
+
           <div>
             <label
               htmlFor="status"
@@ -141,19 +201,25 @@ export const TaskModal: React.FC<TaskModalProps> = ({
             >
               Status
             </label>
-            <select
-              id="status"
+            <Controller
               name="status"
-              value={formData.status}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              disabled={isSubmitting}
-            >
-              <option value="Pending">Pending</option>
-              <option value="In Progress">In Progress</option>
-              <option value="Completed">Completed</option>
-            </select>
+              control={control}
+              render={({ field }) => (
+                <select
+                  {...field}
+                  id="status"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  disabled={isSubmitting}
+                >
+                  <option value="Pending">Pending</option>
+                  <option value="In Progress">In Progress</option>
+                  <option value="Completed">Completed</option>
+                  <option value="Cancelled">Cancelled</option>
+                </select>
+              )}
+            />
           </div>
+
           <div>
             <label
               htmlFor="dueDate"
@@ -161,20 +227,47 @@ export const TaskModal: React.FC<TaskModalProps> = ({
             >
               Due Date
             </label>
-            <input
-              type="date"
-              id="dueDate"
+            <Controller
               name="dueDate"
-              value={formData.dueDate}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              disabled={isSubmitting}
+              control={control}
+              rules={{
+                validate: (value) => {
+                  if (!value) return true; // Optional field
+                  const selectedDate = new Date(value);
+                  const today = new Date();
+                  today.setHours(0, 0, 0, 0);
+
+                  if (selectedDate < today) {
+                    return "Due date cannot be in the past";
+                  }
+                  return true;
+                },
+              }}
+              render={({ field }) => (
+                <input
+                  {...field}
+                  type="date"
+                  id="dueDate"
+                  className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 transition-colors ${
+                    errors.dueDate
+                      ? "border-red-300 focus:ring-red-500 focus:border-red-500"
+                      : "border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                  }`}
+                  disabled={isSubmitting}
+                />
+              )}
             />
+            {errors.dueDate && (
+              <p className="mt-1 text-sm text-red-600">
+                {errors.dueDate.message}
+              </p>
+            )}
           </div>
+
           <div className="flex justify-end space-x-3 pt-4">
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
               className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors"
               disabled={isSubmitting}
             >
@@ -183,7 +276,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
             <button
               type="submit"
               className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              disabled={isSubmitting || !formData.title.trim()}
+              disabled={isSubmitting || !isValid || !watchedTitle?.trim()}
             >
               {isSubmitting
                 ? mode === "create"
