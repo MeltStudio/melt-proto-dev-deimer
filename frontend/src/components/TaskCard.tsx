@@ -4,20 +4,13 @@ import { Task } from "../hooks/useMockTasks";
 import { formatDate } from "../utils/formatDate";
 import { TaskStatusBadge } from "./TaskStatusBadge";
 
-
 type TaskCardProps = {
   task: Task;
-  onViewTask: (task: Task) => void;
   onEditTask: (task: Task) => void;
   isUpdating: boolean;
 };
 
-export function TaskCard({
-  task,
-  onViewTask,
-  onEditTask,
-  isUpdating,
-}: TaskCardProps) {
+export function TaskCard({ task, onEditTask, isUpdating }: TaskCardProps) {
   return (
     <div className="flex w-full flex-col items-start gap-4 rounded-lg border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md">
       <div className="flex w-full items-start justify-between gap-4">
@@ -34,14 +27,6 @@ export function TaskCard({
           {formatDate(task.dueDate)}
         </span>
         <div className="flex items-center gap-2">
-          <Button
-            variant="neutral-tertiary"
-            size="small"
-            icon={<FeatherEye />}
-            onClick={() => onViewTask(task)}
-          >
-            View
-          </Button>
           <Button
             variant="neutral-tertiary"
             size="small"

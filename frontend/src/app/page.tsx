@@ -54,10 +54,6 @@ export default function Home() {
     }
   };
 
-  const handleViewTask = (task: Task) => {
-    console.log("Viewing task:", task);
-  };
-
   const handleModalSubmit = (taskData: Partial<Task>) => {
     if (modalMode === "create") {
       createTask.mutate(
@@ -137,7 +133,6 @@ export default function Home() {
               <TaskCard
                 key={task.id}
                 task={task}
-                onViewTask={handleViewTask}
                 onEditTask={handleEditTask}
                 isUpdating={updateTask.isPending}
               />
@@ -146,7 +141,6 @@ export default function Home() {
 
           <TasksTable
             tasks={tasks}
-            onViewTask={handleViewTask}
             onEditTask={handleEditTask}
             onDeleteTask={handleDeleteTask}
           />

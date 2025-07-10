@@ -14,14 +14,12 @@ import { TaskStatusBadge } from "./TaskStatusBadge";
 
 type TasksTableProps = {
   tasks: Task[];
-  onViewTask: (task: Task) => void;
   onEditTask: (task: Task) => void;
   onDeleteTask: (taskId: string) => void;
 };
 
 export function TasksTable({
   tasks,
-  onViewTask,
   onEditTask,
   onDeleteTask,
 }: TasksTableProps) {
