@@ -14,38 +14,51 @@ import { TaskStatusBadge } from "./TaskStatusBadge";
 
 type TasksTableProps = {
   tasks: Task[];
+  sortConfig: { key: string; direction: "asc" | "desc" };
+  onSort: (key: keyof Task) => void;
   onEditTask: (task: Task) => void;
   onDeleteTask: (taskId: string) => void;
+};
+
+const SortIcon = ({ direction }: { direction?: "asc" | "desc" }) => {
+  if (!direction) return null;
+  return direction === "asc" ? (
+    <SubframeCore.FeatherArrowUp className="w-4 h-4 ml-1" />
+  ) : (
+    <SubframeCore.FeatherArrowDown className="w-4 h-4 ml-1" />
+  );
 };
 
 export function TasksTable({
   tasks,
   onEditTask,
   onDeleteTask,
+  onSort,
+  sortConfig,
 }: TasksTableProps) {
+  const renderHeaderCell = (label: string, sortKey: keyof Task) => (
+    <Table.HeaderCell
+      className="cursor-pointer hover:bg-slate-100"
+      onClick={() => onSort(sortKey)}
+    >
+      <div className="flex items-center">
+        {label}
+        {sortConfig.key === sortKey && (
+          <SortIcon direction={sortConfig.direction} />
+        )}
+      </div>
+    </Table.HeaderCell>
+  );
   return (
     <div className="flex w-full items-start mobile:hidden bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
-      <Table
-        header={
-          <Table.HeaderRow className="bg-slate-50 border-b border-slate-200">
-            <Table.HeaderCell className="px-6 py-4 text-left text-sm font-semibold text-slate-900">
-              Title
-            </Table.HeaderCell>
-            <Table.HeaderCell className="px-6 py-4 text-left text-sm font-semibold text-slate-900 mobile:hidden">
-              Description
-            </Table.HeaderCell>
-            <Table.HeaderCell className="px-6 py-4 text-left text-sm font-semibold text-slate-900">
-              Status
-            </Table.HeaderCell>
-            <Table.HeaderCell className="px-6 py-4 text-left text-sm font-semibold text-slate-900">
-              Due Date
-            </Table.HeaderCell>
-            <Table.HeaderCell className="px-6 py-4 text-right text-sm font-semibold text-slate-900">
-              Actions
-            </Table.HeaderCell>
-          </Table.HeaderRow>
-        }
-      >
+      <Table>
+        <Table.HeaderRow className="bg-slate-50 border-b border-slate-200">
+          {renderHeaderCell("Title", "title")}
+          <Table.HeaderCell>Description</Table.HeaderCell>
+          {renderHeaderCell("Status", "status")}
+          {renderHeaderCell("Due Date", "dueDate")}
+          <Table.HeaderCell className="text-right">Actions</Table.HeaderCell>
+        </Table.HeaderRow>
         {tasks?.map((task) => {
           return (
             <Table.Row

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
 import { TasksHeader } from "../components/TasksHeader";
 import {
@@ -16,25 +16,51 @@ import { TaskActions } from "../components/TaskActions";
 import { TaskCard } from "../components/TaskCard";
 import { TasksTable } from "../components/TaskTable";
 import { TaskModal } from "../components/TaskModal";
+import { Pagination } from "../components/Paginations";
+import { Loading } from "../components/Loading";
+import { Error } from "../components/Error";
+
+const TASKS_PER_PAGE = 4;
 
 export default function Home() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [viewMode, setViewMode] = useState("table");
-
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"create" | "update">("create");
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [sortConfig, setSortConfig] = useState<{
+    key: keyof Task;
+    direction: "asc" | "desc";
+  }>({ key: "dueDate", direction: "desc" });
+  const [currentPage, setCurrentPage] = useState(1);
 
-  const {
-    data: tasks,
-    isLoading,
-    error,
-  } = useFilteredTasks(searchTerm, statusFilter);
+  const { data, isLoading, error } = useFilteredTasks({
+    searchTerm,
+    statusFilter,
+    sortConfig,
+    pagination: { currentPage, tasksPerPage: TASKS_PER_PAGE },
+  });
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
   const deleteTask = useDeleteTask();
   const taskStats = useTaskStats();
+
+  const tasks = data?.tasks ?? [];
+  const totalPages = data?.totalPages ?? 1;
+
+  const handleSort = (key: keyof Task) => {
+    let direction: "asc" | "desc" = "asc";
+    if (sortConfig.key === key && sortConfig.direction === "asc") {
+      direction = "desc";
+    }
+    setSortConfig({ key, direction });
+    setCurrentPage(1);
+  };
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter]);
 
   const handleCreateTask = () => {
     setModalMode("create");
@@ -90,24 +116,11 @@ export default function Home() {
   };
 
   if (isLoading) {
-    return (
-      <div className="container max-w-7xl mx-auto flex h-full w-full items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2"></div>
-          <p className="text-slate-600">Loading tasks...</p>
-        </div>
-      </div>
-    );
+    <Loading />;
   }
 
   if (error) {
-    return (
-      <div className="container max-w-7xl mx-auto flex h-full w-full items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-600">Error loading tasks: {error.message}</p>
-        </div>
-      </div>
-    );
+    <Error message={error.message} />;
   }
 
   return (
@@ -138,11 +151,17 @@ export default function Home() {
               />
             ))}
           </div>
-
           <TasksTable
             tasks={tasks}
+            sortConfig={sortConfig}
+            onSort={handleSort}
             onEditTask={handleEditTask}
             onDeleteTask={handleDeleteTask}
+          />
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
           />
         </div>
       </div>

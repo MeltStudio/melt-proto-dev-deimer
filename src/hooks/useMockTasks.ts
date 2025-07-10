@@ -26,6 +26,13 @@ export interface UpdateTaskInput {
   dueDate?: Date | null;
 }
 
+type FilteredTasksParams = {
+  searchTerm?: string;
+  statusFilter?: string;
+  sortConfig: { key: keyof Task; direction: "asc" | "desc" };
+  pagination: { currentPage: number; tasksPerPage: number };
+};
+
 let mockTasks: Task[] = [
   {
     id: "1",
@@ -213,38 +220,54 @@ export const useTask = (id: string) => {
   });
 };
 
-export const useFilteredTasks = (
-  searchTerm: string = "",
-  statusFilter: string = ""
-) => {
-  const { data: tasks, ...rest } = useTasks();
+export const useFilteredTasks = ({
+  searchTerm = "",
+  statusFilter = "",
+  sortConfig,
+  pagination,
+}: FilteredTasksParams) => {
+  return useQuery({
+    queryKey: ["tasks", { searchTerm, statusFilter, sortConfig, pagination }],
+    queryFn: async () => {
+      let filtered = mockTasks.filter((task) => {
+        const searchMatch = task.title
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase());
+        const statusMatch = statusFilter ? task.status === statusFilter : true;
+        return searchMatch && statusMatch;
+      });
 
-  const filteredTasks = useMemo(() => {
-    if (!tasks) return [];
+      if (sortConfig.key) {
+        filtered.sort((a, b) => {
+          const aValue = a[sortConfig.key];
+          const bValue = b[sortConfig.key];
 
-    let filtered = tasks;
+          if (aValue === null || aValue === undefined) return 1;
+          if (bValue === null || bValue === undefined) return -1;
 
-    if (searchTerm) {
-      filtered = filtered.filter(
-        (task) =>
-          task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          task.description?.toLowerCase().includes(searchTerm.toLowerCase())
+          let comparison = 0;
+          if (aValue > bValue) {
+            comparison = 1;
+          } else if (aValue < bValue) {
+            comparison = -1;
+          }
+
+          return sortConfig.direction === "desc" ? comparison * -1 : comparison;
+        });
+      }
+
+      const totalTasks = filtered.length;
+      const totalPages = Math.ceil(totalTasks / pagination.tasksPerPage);
+      const startIndex = (pagination.currentPage - 1) * pagination.tasksPerPage;
+      const paginatedTasks = filtered.slice(
+        startIndex,
+        startIndex + pagination.tasksPerPage
       );
-    }
 
-    if (statusFilter && statusFilter !== "all") {
-      filtered = filtered.filter((task) => task.status === statusFilter);
-    }
-
-    return filtered;
-  }, [tasks, searchTerm, statusFilter]);
-
-  return {
-    data: filteredTasks,
-    ...rest,
-  };
+      return { tasks: paginatedTasks, totalPages };
+    },
+  });
 };
-
 export const useTaskStats = () => {
   const { data: tasks } = useTasks();
 
